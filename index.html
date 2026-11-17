@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- PWA: приложение для телефона -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#F7F2E0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Side Story">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="manifest" href="manifest.json">
+<title>Side Story — выбор книги</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Playfair+Display:ital,wght@0,500;0,700;1,500&display=swap" rel="stylesheet">
+<style>
+  /* --- ОСНОВНАЯ ПАЛИТРА (IVORY & BORDEAUX) --- */
+  :root {
+    --bg-gradient: #F7F2E0; /* Ivory Mist */
+    --text-main: #5B0015;   /* Night Bordeaux */
+    --accent-color: #80AEE9; /* Cool Horizon */
+    --accent-text: #F7F2E0;  
+    --card-hover: #16131F;   
+    --modal-bg: #FFFFFF;       
+    --modal-shadow: 0 20px 50px rgba(91, 0, 21, 0.15);
+    --modal-overlay: rgba(247, 242, 224, 0.85);
+    --border-color: rgba(91, 0, 21, 0.15);
+  }
+
+  [data-theme="dark"] {
+    --bg-gradient: #16131F; /* Back in Black */
+    --text-main: #F7F2E0;   /* Ivory Mist */
+    --accent-color: #80AEE9; /* Cool Horizon */
+    --accent-text: #16131F;   
+    --card-hover: #5B0015;     
+    --modal-bg: #23202B;       
+    --modal-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    --modal-overlay: rgba(22, 19, 31, 0.85);
+    --border-color: rgba(247, 242, 224, 0.15);
+  }
+
+  /* --- ПАЛИТРА ДЛЯ ПОЛКИ (ТЕМНАЯ) --- */
+  .shelf-theme {
+    --shelf-bg: #391214; /* Dark Sienna */
+    --shelf-card-bg: #4A3F4B; /* Funkie Friday */
+    --shelf-text: #F7F2E0;
+    --shelf-accent: #C1A0AC; /* Decanting */
+    --shelf-border: rgba(247, 242, 224, 0.1);
+  }
+
+  /* --- ПАЛИТРА ДЛЯ ПОЛКИ (СВЕТЛАЯ) --- */
+  [data-theme="light"] .shelf-theme {
+    --shelf-bg: #F0D9E4; /* Mountain Heather */
+    --shelf-card-bg: #FFFFFF;
+    --shelf-text: #391214; /* Dark Sienna */
+    --shelf-accent: #816A60;
+    --shelf-border: rgba(57, 18, 20, 0.1);
+  }
+
+  * {
+    box-sizing: border-box;
+    transition: background 0.4s, color 0.4s, border-color 0.4s, box-shadow 0.4s;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    color: var(--text-main);
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* --- ВЕРХНЯЯ ПАНЕЛЬ --- */
+  .top-bar {
+    position: absolute;
+    top: 25px;
+    right: 25px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    z-index: 100;
+  }
+
+  .theme-toggle-top {
+    background: transparent;
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    opacity: 0.6;
+    transition: all 0.2s;
+  }
+  .theme-toggle-top:hover {
+    opacity: 1;
+    background: var(--text-main);
+    color: var(--bg-gradient);
+  }
+
+  .countdown-box {
+    background: var(--modal-bg);
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    text-align: center;
+  }
+  .countdown-box span {
+    color: var(--accent-color);
+    font-weight: 700;
+  }
+
+  /* --- ПЛАШКА КНИГИ --- */
+  .current-book-banner {
+    background: var(--modal-bg);
+    border: 2px solid var(--accent-color);
+    padding: 15px 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    transition: all 0.4s ease;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .current-book-banner.hidden {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+    position: absolute;
+  }
+  .current-book-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    opacity: 0.7;
+    margin-bottom: 5px;
+  }
+  .current-book-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    margin: 0;
+  }
+
+  /* --- ТИТУЛ --- */
+  .header {
+    text-align: center;
+    margin-bottom: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .header-top {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    margin-bottom: 15px;
+    color: var(--accent-color);
+  }
+
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 4.5rem;
+    margin: 0;
+    color: var(--text-main);
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .header-subtitle {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.4rem;
+    margin-top: 10px;
+    opacity: 0.9;
+  }
+
+  /* --- СЕТКА --- */
+  .grid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .row {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+  }
+
+  .card {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4.5rem;
+    font-weight: 500;
+    color: var(--text-main);
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s, opacity 0.3s;
+    font-family: 'Playfair Display', serif;
+  }
+
+  .card:hover {
+    transform: scale(1.15) translateY(-5px);
+    color: var(--accent-color);
+  }
+
+  /* Стиль для выбывших книг */
+  .card.chosen {
+    color: var(--text-main);
+    opacity: 0.3;
+    transform: scale(0.9);
+  }
+
+  .card.chosen::after {
+    content: "✕";
+    position: absolute;
+    font-size: 6rem;
+    color: var(--text-main);
+    font-weight: 300;
+    pointer-events: none;
+    opacity: 0.8;
+  }
+
+  /* Стиль для книги-победителя */
+  .card.winner {
+    color: var(--accent-color);
+    transform: scale(1.2);
+    text-shadow: 0 0 20px rgba(128, 174, 233, 0.4);
+  }
+
+  .card.winner::before {
+    content: "👑";
+    position: absolute;
+    top: -20px;
+    font-size: 2rem;
+    animation: float 2s ease-in-out infinite;
+  }
+
+  /* --- НИЖНЯЯ ПАНЕЛЬ --- */
+  .bottom-controls {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    gap: 15px;
+    z-index: 100;
+  }
+
+  .btn-bottom {
+    background: var(--modal-bg);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    padding: 10px 18px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-bottom:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  }
+
+  /* --- МОДАЛЬНЫЕ ОКНА --- */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--modal-overlay);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    z-index: 1000;
+    padding: 20px;
+    backdrop-filter: blur(8px);
+  }
+
+  .modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .modal-content {
+    background: var(--modal-bg);
+    border-radius: 24px;
+    padding: 40px 30px;
+    max-width: 550px;
+    width: 100%;
+    position: relative;
+    box-shadow: var(--modal-shadow);
+    transform: translateY(30px) scale(0.95);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-overlay.active .modal-content {
+    transform: translateY(0) scale(1);
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 2rem;
+    background: none;
+    border: none;
+    color: var(--text-main);
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+    z-index: 10;
+  }
+  .close-btn:hover { opacity: 1; }
+
+  /* --- МОДАЛКА С КНИГОЙ --- */
+  .book-cover {
+    width: 150px;
+    height: 220px;
+    background-color: var(--border-color);
+    background-size: cover;
+    background-position: center;
+    border-radius: 6px;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    text-align: center;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    opacity: 0.9;
+  }
+
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    margin: 0 0 15px 0;
+    color: var(--text-main);
+    line-height: 1.2;
+  }
+
+  .modal-desc {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 25px;
+    color: var(--text-main);
+    opacity: 0.85;
+  }
+
+  .choose-btn {
+    background: var(--accent-color); 
+    color: var(--accent-text);
+    border: none;
+    padding: 15px 35px;
+    border-radius: 30px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  }
+
+  .choose-btn:hover {
+    transform: translateY(-3px);
+    opacity: 0.9;
+    box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+  }
+
+  .choose-btn.cancel-state {
+    background: transparent !important;
+    color: var(--text-main) !important;
+    border: 2px solid var(--text-main) !important;
+    box-shadow: none;
+  }
+
+  /* --- МОДАЛКА С ПРАВИЛАМИ --- */
+  .rules-content {
+    text-align: left;
+    width: 100%;
+  }
+  
+  .rules-content h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    color: var(--accent-color);
+  }
+
+  .rules-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .rules-list li {
+    position: relative;
+    padding-left: 30px;
+    margin-bottom: 15px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .rules-list li::before {
+    content: "🐚";
+    position: absolute;
+    left: 0;
+    top: 2px;
+    font-size: 1.1rem;
+  }
+
+  .floating-icon {
+    font-size: 3rem;
+    text-align: center;
+    margin-bottom: 10px;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+
+  /* --- ПОЛКА --- */
+  #shelf-modal {
+    background: var(--shelf-bg);
+    color: var(--shelf-text);
+    padding: 40px 20px;
+    overflow-y: auto;
+  }
+
+  #shelf-modal .modal-content {
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    max-width: 800px;
+    padding: 0;
+  }
+
+  #shelf-modal .close-btn {
+    color: var(--shelf-text);
+    font-size: 3rem;
+    top: 10px;
+    right: 20px;
+    opacity: 0.7;
+  }
+  #shelf-modal .close-btn:hover { opacity: 1; }
+
+  .shelf-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 3rem;
+    text-align: center;
+    color: var(--shelf-text);
+    margin-bottom: 10px;
+    margin-top: 20px;
+  }
+
+  .shelf-subtitle {
+    text-align: center;
+    font-size: 1rem;
+    opacity: 0.7;
+    margin-bottom: 40px;
+  }
+
+  .category-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: var(--shelf-text);
+    margin-top: 30px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--shelf-border);
+    padding-bottom: 10px;
+    text-align: left;
+    opacity: 0.8;
+  }
+
+  .shelf-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .shelf-item {
+    display: flex;
+    align-items: center;
+    background: var(--shelf-card-bg);
+    border-radius: 10px;
+    padding: 12px 18px;
+    border: 1px solid var(--shelf-border);
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .shelf-item:hover {
+    transform: translateX(5px);
+    border-color: var(--shelf-accent);
+  }
+
+  .shelf-item-place {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: bold;
+    width: 40px;
+    text-align: center;
+    opacity: 0.6;
+  }
+
+  .shelf-item-info {
+    flex-grow: 1;
+    padding: 0 15px;
+    text-align: left;
+  }
+
+  .shelf-item-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    margin: 0 0 3px 0;
+    font-weight: 600;
+  }
+
+  .shelf-item-author {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin: 0;
+    font-style: italic;
+  }
+
+  .shelf-item-rating {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: var(--shelf-accent);
+    width: 50px;
+    text-align: right;
+  }
+
+  /* --- САЛЮТ --- */
+  .confetti {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+    z-index: 2000;
+    animation: fall 2.5s linear forwards;
+  }
+
+  @keyframes fall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  @media (max-width: 600px) {
+    .header h1 { font-size: 3.5rem; }
+    .header-subtitle { font-size: 1.2rem; }
+    .row { gap: 20px; }
+    .card { width: 60px; height: 60px; font-size: 3.5rem; }
+    .modal-content { padding: 30px 20px; }
+    .book-cover { width: 120px; height: 180px; }
+    .bottom-controls { bottom: 15px; right: 15px; flex-direction: column; gap: 10px; }
+    .btn-bottom { padding: 8px 12px; font-size: 0.75rem; }
+    .shelf-title { font-size: 2.2rem; }
+    .shelf-item { padding: 10px; }
+    .shelf-item-place { font-size: 1.1rem; width: 30px; }
+    .shelf-item-title { font-size: 0.95rem; }
+    .shelf-item-rating { font-size: 1.2rem; width: 40px; }
+  }
+</style>
+</head>
+<body data-theme="light">
+
+<!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+<div class="top-bar">
+  <button class="theme-toggle-top" onclick="toggleTheme()" id="theme-btn">Тёмная тема</button>
+  <div class="countdown-box" id="countdown">
+    До встречи: <span>...</span>
+  </div>
+</div>
+
+<!-- ПЛАШКА ТЕКУЩЕЙ КНИГИ -->
+<div class="current-book-banner hidden" id="current-banner">
+  <div class="current-book-label">Мы читаем</div>
+  <p class="current-book-title" id="current-title">Название</p>
+</div>
+
+<header class="header">
+  <div class="header-top">Side Story</div>
+  <h1>Книжный<br>клуб</h1>
+  <div class="header-subtitle">выбор следующей книги</div>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<button class="reset-btn" onclick="resetAll()" style="margin-top: 30px; opacity: 0.5; font-size: 0.8rem; background: transparent; border: none; color: inherit; cursor: pointer; text-transform: uppercase;">Сбросить выборы</button>
+
+<!-- НИЖНЯЯ ПАНЕЛЬ -->
+<div class="bottom-controls">
+  <button class="btn-bottom" onclick="openShelf()">📚 Наша полка</button>
+  <button class="btn-bottom" onclick="openRules()">🐚 Правила</button>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО С КНИГОЙ -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <button class="close-btn" onclick="closeModal()">×</button>
+    
+    <div class="book-cover" id="modal-cover"></div>
+    
+    <h2 class="modal-title" id="modal-title">Название</h2>
+    <p class="modal-desc" id="modal-desc">Описание</p>
+    
+    <button class="choose-btn" id="choose-btn">Выбрать эту книгу</button>
+  </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО С ПРАВИЛАМИ -->
+<div class="modal-overlay" id="rules-modal" onclick="closeRules(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <button class="close-btn" onclick="closeRules()">×</button>
+    
+    <div class="floating-icon">🐚</div>
+    <div class="rules-content">
+      <h2>ПРАВИЛА</h2>
+      <ul class="rules-list">
+        <li>Книги выбираем по очереди. Как правило, каждая ко встрече готовит произведение, которое хочет предложить, и с помощью рандомайзера слов мы отбираем пахана того, кто определит наше настроение на ближайшие три недели. На следующей встрече этого человека в списке уже нет, и так пока круг не замкнётся. Иногда нам становится скучно просто отбирать, и мы придумываем интерактивы, но это уже нюансы.</li>
+        <li>Читаем только те книги, которые не читал никто.</li>
+        <li>НЕ осуждаем выбор книги, даже если это «50 оттенков серого». Конструктивная критика приветствуется, но пассивную агрессию оставим для обсуждения своих неудачных жизненных решений.</li>
+        <li>НЕ читаем научпоп и нонфик, либо выбираем по согласованию.</li>
+        <li>НЕ читаем серии и циклы.</li>
+        <li>Встречаемся каждые три недели – по согласованному мнению, этого вполне достаточно для прочтения. Дату следующей встречи определяем на предыдущей и заранее не строим на этот день других планов (форс-мажоров не касается).</li>
+        <li>По возможности встречаемся ОЧНО – это отличная возможность не только обсудить книги, но и сходить в новое место, вкусно покушать или выпить в компании подруг.</li>
+        <li>Стараемся избегать особо провокационных тем. Политика и религия – это не для нашего клуба, здесь мы о литературе и о том, кто пидорас и почему.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ПОЛНОЭКРАННОЕ ОКНО «ПОЛКА» -->
+<div class="modal-overlay shelf-theme" id="shelf-modal" onclick="closeShelf(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <button class="close-btn" onclick="closeShelf()">×</button>
+    
+    <h1 class="shelf-title">Наша полка</h1>
+    <p class="shelf-subtitle">История прочитанных книг и ваши оценки</p>
+    
+    <div class="shelf-container">
+      <!-- 1 МЕСТО (ЗОЛОТАЯ ПОЛКА) -->
+      <div class="category-title">🏆 Золотая полка (8.0 и выше)</div>
+      <div class="shelf-list">
+        <div class="shelf-item">
+          <div class="shelf-item-place">1</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Похититель детей</p>
+            <p class="shelf-item-author">Бром</p>
+          </div>
+          <div class="shelf-item-rating">8.9</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">2</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Там, где раки поют</p>
+            <p class="shelf-item-author">Делия Оуэнс</p>
+          </div>
+          <div class="shelf-item-rating">8.6</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">3</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Vita Nostra</p>
+            <p class="shelf-item-author">Марина и Сергей Дяченко</p>
+          </div>
+          <div class="shelf-item-rating">8.4</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">4</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">(Бес) человечность</p>
+            <p class="shelf-item-author">Вадим Панов</p>
+          </div>
+          <div class="shelf-item-rating">8.6</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">5</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Зверь</p>
+            <p class="shelf-item-author">Кармен Мола</p>
+          </div>
+          <div class="shelf-item-rating">8.1</div>
+        </div>
+      </div>
+
+      <!-- 2 МЕСТО (ХОРОШО ПОШЛО) -->
+      <div class="category-title">📖 Хорошо пошло (6.0 – 7.9)</div>
+      <div class="shelf-list">
+        <div class="shelf-item">
+          <div class="shelf-item-place">6</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">О всех созданиях — больших и малых</p>
+            <p class="shelf-item-author">Джеймс Хэрриот</p>
+          </div>
+          <div class="shelf-item-rating">7.8</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">7</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Цитадель</p>
+            <p class="shelf-item-author">Арчибальд Кронин</p>
+          </div>
+          <div class="shelf-item-rating">7.6</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">8</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Вавилон</p>
+            <p class="shelf-item-author">Ребекка Куанг</p>
+          </div>
+          <div class="shelf-item-rating">7.3</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">9</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Однажды в Голливуде</p>
+            <p class="shelf-item-author">Квентин Тарантино</p>
+          </div>
+          <div class="shelf-item-rating">7.3</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">10</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Прачечная, стирающая печали</p>
+            <p class="shelf-item-author">Ким Чжи Юн</p>
+          </div>
+          <div class="shelf-item-rating">7.2</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">11</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Конец света</p>
+            <p class="shelf-item-author">Ребекка Уэйт</p>
+          </div>
+          <div class="shelf-item-rating">7.2</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">12</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Йага. Колдовская невеста</p>
+            <p class="shelf-item-author">Даха Тараторина</p>
+          </div>
+          <div class="shelf-item-rating">7.0</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">13</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Танатонавты</p>
+            <p class="shelf-item-author">Бернард Вербер</p>
+          </div>
+          <div class="shelf-item-rating">7.0</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">14</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Ребекка</p>
+            <p class="shelf-item-author">Дафна Дюморье</p>
+          </div>
+          <div class="shelf-item-rating">6.8</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">15</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Вдали от обезумевшей толпы</p>
+            <p class="shelf-item-author">Томас Гарди</p>
+          </div>
+          <div class="shelf-item-rating">6.6</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">16</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Правила виноделов</p>
+            <p class="shelf-item-author">Джон Ирвинг</p>
+          </div>
+          <div class="shelf-item-rating">6.2</div>
+        </div>
+      </div>
+
+      <!-- 3 МЕСТО (СПОРНЫЕ) -->
+      <div class="category-title">📉 Спорные книги (ниже 6.0)</div>
+      <div class="shelf-list">
+        <div class="shelf-item">
+          <div class="shelf-item-place">17</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Жизнь на продажу</p>
+            <p class="shelf-item-author">Юкио Мисима</p>
+          </div>
+          <div class="shelf-item-rating">5.8</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">18</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Город и его ненадёжные стены</p>
+            <p class="shelf-item-author">Харуки Мураками</p>
+          </div>
+          <div class="shelf-item-rating">5.8</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">19</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Уроки итальянского</p>
+            <p class="shelf-item-author">Мейв Бинчи</p>
+          </div>
+          <div class="shelf-item-rating">5.6</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">20</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Смерть под ореховым деревом</p>
+            <p class="shelf-item-author">Анви Рид</p>
+          </div>
+          <div class="shelf-item-rating">5.0</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">21</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Леденцовые туфельки</p>
+            <p class="shelf-item-author">Джоан Харрис</p>
+          </div>
+          <div class="shelf-item-rating">3.3</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">22</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Змейские чары</p>
+            <p class="shelf-item-author">Наталия Осояну</p>
+          </div>
+          <div class="shelf-item-rating">3.0</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">23</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">День, когда я исчезла</p>
+            <p class="shelf-item-author">Ким Харим</p>
+          </div>
+          <div class="shelf-item-rating">2.8</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">24</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">Прощай, оружие!</p>
+            <p class="shelf-item-author">Эрнест Хемингуэй</p>
+          </div>
+          <div class="shelf-item-rating">2.3</div>
+        </div>
+        <div class="shelf-item">
+          <div class="shelf-item-place">25</div>
+          <div class="shelf-item-info">
+            <p class="shelf-item-title">У меня к вам несколько вопросов</p>
+            <p class="shelf-item-author">Ребекка Маккай</p>
+          </div>
+          <div class="shelf-item-rating">1.5</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // НАСТРОЙКА ДАТЫ ВСТРЕЧИ (26 ноября 2026)
+  const meetingDate = new Date(2026, 10, 26); 
+
+  const books = [
+    {
+      title: "Рождество за поворотом",
+      desc: "Лорен Ричмонд не любит праздники, но вынуждена отправиться домой через всю страну в компании Уилла Синклера — друга брата и человека из прошлого. Долгая дорога, вынужденная близость и старая привязанность...",
+      cover: "Cover 1.jpg"
+    },
+    {
+      title: "Ёлочная ферма «Аромат зимы»",
+      desc: "Кира Норт покупает заброшенную ферму в Дрим-Харборе, чтобы начать жизнь заново. Рядом появляется Беннет Эллис, привыкший решать чужие проблемы. Зимняя история о романтике, юморе и поиске дома.",
+      cover: "Cover 2.jpg"
+    },
+    {
+      title: "Любовь под омелой",
+      desc: "Сборник из четырёх новогодних историй. Старые друзья заперты в доме во время снежной бури, поход за джинсами оборачивается знакомством, соседи на вечеринке понимают, что притяжение слишком явное...",
+      cover: "Cover 3.jpg"
+    },
+    {
+      title: "Дочь врага",
+      desc: "Романтическое фэнтези о запретной любви на фоне многолетней вражды. Дочь вождя вынуждена выбирать между верностью народу и чувством к сыну врага. Переосмысление легенды о Тристане и Изольде.",
+      cover: "Cover 4.jpg"
+    },
+    {
+      title: "Вампиры из книжного клуба по пятницам",
+      desc: "Городское фэнтези с детективной линией. Начинающая журналистка расследует исчезновение двух подростков в городе, где люди живут рядом с вампирами. В расследовании участвуют участники её книжного клуба.",
+      cover: "Cover 5.jpg"
+    },
+    {
+      title: "На острие",
+      desc: "Современный любовный роман о девушке, которая устраивается администратором в тату-салон сурового друга своего брата. Декс Локк привык держать всё под контролем, но постепенно взаимное раздражение сменяется притяжением.",
+      cover: "Cover 6.jpg"
+    },
+    {
+      title: "Виола ненавидит кофе, но любит деньги",
+      desc: "Мистический детектив о медиуме, которая предпочитает иметь дело с живыми. В Лондоне она встречает призрака умершей корейской поп-звезды, который просит разобраться в её гибели. Закулисье шоу-бизнеса, тайны и юмор.",
+      cover: "Cover 7.jpg"
+    }
+  ];
+
+  const grid = document.getElementById('grid');
+  const modal = document.getElementById('modal');
+  const rulesModal = document.getElementById('rules-modal');
+  const shelfModal = document.getElementById('shelf-modal');
+  const modalTitle = document.getElementById('modal-title');
+  const modalDesc = document.getElementById('modal-desc');
+  const chooseBtn = document.getElementById('choose-btn');
+  const modalCover = document.getElementById('modal-cover');
+  const currentBanner = document.getElementById('current-banner');
+  const currentTitle = document.getElementById('current-title');
+  
+  let currentIndex = null;
+
+  // --- ЛОГИКА ТАЙМЕРА ---
+  function updateCountdown() {
+    const now = new Date();
+    const diff = meetingDate - now;
+
+    if (diff <= 0) {
+      document.getElementById('countdown').innerHTML = "Встреча уже сегодня! 🎉";
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    
+    if (days > 0) {
+      document.getElementById('countdown').innerHTML = `До встречи: <span>${days} дн.</span>`;
+    } else {
+      document.getElementById('countdown').innerHTML = `До встречи: <span>${hours} ч.</span>`;
+    }
+  }
+  updateCountdown();
+  setInterval(updateCountdown, 1000 * 60);
+
+  // --- ЛОГИКА ИГРЫ НА ВЫБЫВАНИЕ ---
+  function checkWinner() {
+    const allCards = document.querySelectorAll('.card');
+    const chosenCards = document.querySelectorAll('.card.chosen');
+    const remainingCards = allCards.length - chosenCards.length;
+
+    // Убираем статус победителя со всех
+    allCards.forEach(c => c.classList.remove('winner'));
+
+    // Если осталась ровно одна невыбранная книга — она победитель
+    if (remainingCards === 1) {
+      allCards.forEach(card => {
+        if (!card.classList.contains('chosen')) {
+          card.classList.add('winner');
+          const winnerIndex = card.dataset.index;
+          
+          // Обновляем плашку
+          currentTitle.textContent = books[winnerIndex].title;
+          currentBanner.classList.remove('hidden');
+          
+          // Запускаем салют
+          triggerConfetti();
+
+          // С небольшой задержкой открываем модальное окно победителя
+          setTimeout(() => {
+            openModal(winnerIndex);
+            chooseBtn.textContent = 'Это наш выбор!';
+            chooseBtn.classList.add('cancel-state');
+            chooseBtn.disabled = true;
+          }, 500);
+        }
+      });
+    } else {
+      // Если книг больше одной или выбраны все — скрываем плашку
+      currentBanner.classList.add('hidden');
+    }
+  }
+
+  // --- САЛЮТ (КОНФЕТТИ) ---
+  function triggerConfetti() {
+    const colors = ['#5B0015', '#80AEE9', '#C1A0AC', '#F7F2E0'];
+    for (let i = 0; i < 80; i++) {
+      const confetti = document.createElement('div');
+      confetti.classList.add('confetti');
+      
+      confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      confetti.style.left = Math.random() * 100 + 'vw';
+      
+      const size = Math.random() * 8 + 6;
+      confetti.style.width = size + 'px';
+      confetti.style.height = size + 'px';
+      
+      confetti.style.animationDuration = (Math.random() * 1.5 + 1.5) + 's';
+      confetti.style.animationDelay = (Math.random() * 0.5) + 's';
+
+      if (Math.random() > 0.5) {
+        confetti.style.borderRadius = '50%';
+      }
+      
+      document.body.appendChild(confetti);
+
+      setTimeout(() => {
+        confetti.remove();
+      }, 4000);
+    }
+  }
+
+  function renderGrid() {
+    const row1 = document.createElement('div');
+    row1.className = 'row';
+    const row2 = document.createElement('div');
+    row2.className = 'row';
+
+    books.forEach((book, index) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.index = index;
+      card.textContent = index + 1;
+
+      card.addEventListener('click', () => openModal(index));
+
+      if (index < 4) {
+        row1.appendChild(card);
+      } else {
+        row2.appendChild(card);
+      }
+    });
+
+    grid.appendChild(row1);
+    grid.appendChild(row2);
+  }
+
+  renderGrid();
+
+  function openModal(index) {
+    currentIndex = index;
+    const book = books[index];
+    
+    modalTitle.textContent = book.title;
+    modalDesc.textContent = book.desc;
+    
+    if (book.cover) {
+      modalCover.style.backgroundImage = `url('${book.cover}')`;
+      modalCover.textContent = ''; 
+    } else {
+      modalCover.style.backgroundImage = 'none';
+      modalCover.textContent = 'Обложка\nскоро будет';
+    }
+
+    const card = document.querySelector(`.card[data-index="${index}"]`);
+    
+    if (card.classList.contains('winner')) {
+      chooseBtn.textContent = 'Это наш выбор!';
+      chooseBtn.classList.add('cancel-state');
+      chooseBtn.disabled = true;
+    } else {
+      chooseBtn.disabled = false;
+      const isChosen = card.classList.contains('chosen');
+      if (isChosen) {
+        chooseBtn.textContent = 'Вернуть в игру';
+        chooseBtn.classList.add('cancel-state'); 
+      } else {
+        chooseBtn.textContent = 'Вычеркнуть книгу';
+        chooseBtn.classList.remove('cancel-state');
+      }
+    }
+
+    modal.classList.add('active');
+  }
+
+  function closeModal() {
+    modal.classList.remove('active');
+  }
+
+  function openRules() {
+    rulesModal.classList.add('active');
+  }
+
+  function closeRules() {
+    rulesModal.classList.remove('active');
+  }
+
+  function openShelf() {
+    shelfModal.classList.add('active');
+  }
+
+  function closeShelf() {
+    shelfModal.classList.remove('active');
+  }
+
+  chooseBtn.addEventListener('click', () => {
+    if (currentIndex !== null) {
+      const card = document.querySelector(`.card[data-index="${currentIndex}"]`);
+      
+      if (card.classList.contains('winner')) return;
+
+      if (card.classList.contains('chosen')) {
+        card.classList.remove('chosen');
+      } else {
+        card.classList.add('chosen');
+      }
+      
+      closeModal();
+      checkWinner(); 
+    }
+  });
+
+  function toggleTheme() {
+    const body = document.body;
+    const themeBtn = document.getElementById('theme-btn');
+    if (body.getAttribute('data-theme') === 'light') {
+      body.setAttribute('data-theme', 'dark');
+      if(themeBtn) themeBtn.textContent = 'Светлая тема';
+    } else {
+      body.setAttribute('data-theme', 'light');
+      if(themeBtn) themeBtn.textContent = 'Тёмная тема';
+    }
+  }
+
+  function resetAll() {
+    document.querySelectorAll('.card').forEach(c => {
+      c.classList.remove('chosen');
+      c.classList.remove('winner');
+    });
+    currentBanner.classList.add('hidden');
+  }
+</script>
+
+</body>
+</html>
